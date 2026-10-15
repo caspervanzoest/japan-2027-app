@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F6F1E8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Japan">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Japan · infra-test</title>
+<style>
+:root{--washi:#F6F1E8;--paper:#FFFDF8;--sumi:#1E1C19;--ink2:#5B5650;--line:#E4DCCD;--shu:#C8402A;--ai:#27395A;--ok:#5E7D3A;--warn:#B8862B}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"SF Pro Text",system-ui,sans-serif;background:var(--washi);color:var(--sumi);padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 24px);font-size:15px}
+h1{font-size:26px;font-weight:800}
+.sub{color:var(--ink2);font-size:13px;margin:2px 0 14px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:13px;margin-bottom:12px}
+.card h2{font-size:16px;display:flex;align-items:center;gap:8px}
+.dot{width:11px;height:11px;border-radius:50%;background:#CFC5B3;flex:none}
+.dot.ok{background:var(--ok)}.dot.bad{background:var(--shu)}.dot.busy{background:var(--warn)}
+.card p{font-size:13px;color:var(--ink2);margin:6px 0 0;line-height:1.4}
+.row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+input,textarea{width:100%;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:#fff;margin-top:8px}
+button{font:inherit;font-weight:700;font-size:14px;border:none;border-radius:10px;padding:9px 12px;background:var(--sumi);color:#fff}
+button.sec{background:#EFE8DB;color:var(--sumi)}
+button:disabled{opacity:.45}
+pre{white-space:pre-wrap;word-break:break-word;font-size:12px;background:#F4EEE3;border-radius:10px;padding:8px;margin-top:8px;max-height:220px;overflow:auto}
+.kv{font-size:12.5px;color:var(--ink2);margin-top:6px;line-height:1.5}
+.kv b{color:var(--sumi)}
+.ver{font-size:11px;color:var(--ink2);text-align:center;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>Japan · infra-test</h1>
+<div class="sub">Controleert of alle verbindingen werken. Geen echte app.</div>
+
+<div class="card" id="c-app">
+  <h2><span class="dot" id="d-app"></span>1. App en offline</h2>
+  <div class="kv" id="appinfo"></div>
+  <p>Zet deze pagina via Delen → "Zet op beginscherm" en open hem daar. Zet daarna vliegtuigmodus aan en open opnieuw: de pagina moet gewoon laden.</p>
+</div>
+
+<div class="card">
+  <h2><span class="dot" id="d-gh"></span>2. Reisdata (GitHub)</h2>
+  <p>Fine-grained token met alleen toegang tot <b>japan-2027</b>, Contents: Read and write. Blijft alleen op deze telefoon.</p>
+  <input id="ghtok" type="password" placeholder="github_pat_…" autocomplete="off">
+  <div class="row"><button onclick="ghSave()">Bewaar token</button><button class="sec" onclick="ghRead()">Lees programma</button><button class="sec" onclick="ghWrite()">Schrijf testbestand</button></div>
+  <pre id="ghout" hidden></pre>
+</div>
+
+<div class="card">
+  <h2><span class="dot" id="d-t3"></span>3. Assistent (T3 op de devserver)</h2>
+  <div id="t3pair">
+    <p>Maak op de devserver een koppelcode met <b>japan-agent pair</b> (10 minuten geldig, één keer bruikbaar) en plak hem hier.</p>
+    <input id="paircode" placeholder="adres#code" autocapitalize="off" autocomplete="off" spellcheck="false">
+    <div class="row"><button onclick="t3Pair()">Koppelen</button></div>
+  </div>
+  <div id="t3chat" hidden>
+    <div class="kv" id="t3info"></div>
+    <input id="q" value="Infra-test vanaf de iPhone: op welke dag kom ik in Hiroshima aan? Eén zin.">
+    <div class="row"><button id="askbtn" onclick="t3Ask()">Vraag</button><button class="sec" onclick="t3Forget()">Ontkoppel</button></div>
+  </div>
+  <pre id="t3out" hidden></pre>
+</div>
+
+<div class="card">
+  <h2><span class="dot" id="d-push"></span>4. Pushmeldingen</h2>
+  <p>Werkt alleen vanuit de app op het beginscherm. De inschrijving gaat naar de reisdata (stap 2 moet dus werken); daarna stuurt de devserver een testmelding.</p>
+  <div class="row"><button onclick="pushOn()">Meldingen aanzetten</button></div>
+  <pre id="pushout" hidden></pre>
+</div>
+
+<div class="ver" id="ver"></div>
+
+<script>
+const CFG = {
+  repo: 'caspervanzoest/japan-2027',
+  project: 'japan-2027',
+  model: 'claude-sonnet-5-5',
+  vapid: 'BJJMJ1ddz3Xb-mg0PbcbRr97hkzm3VZW5tOFPx_r0rm9jVHXJMNxcC7OSUJ1PTcocDsKf_aPYGfYlwRJFq_91us',
+  version: 'infra-test 1',
+};
+const $ = id => document.getElementById(id);
+const LS = { get: k => localStorage.getItem('jp.' + k), set: (k, v) => localStorage.setItem('jp.' + k, v), del: k => localStorage.removeItem('jp.' + k) };
+const dot = (id, s) => { $(id).className = 'dot ' + (s || '') };
+const show = (id, t) => { const e = $(id); e.hidden = false; e.textContent = t };
+const uuid = () => crypto.randomUUID();
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+/* ---------- 1. app ---------- */
+async function appInfo() {
+  let sw = 'niet ondersteund';
+  if ('serviceWorker' in navigator) {
+    try { await navigator.serviceWorker.register('sw.js'); sw = navigator.serviceWorker.controller ? 'actief' : 'geregistreerd (herlaad één keer)'; } catch (e) { sw = 'fout: ' + e.message }
+  }
+  let persist = '?';
+  try { persist = navigator.storage?.persist ? ((await navigator.storage.persist()) ? 'ja' : 'nee') : 'niet ondersteund' } catch { }
+  $('appinfo').innerHTML = `Op beginscherm: <b>${standalone() ? 'ja' : 'nee'}</b><br>Service worker: <b>${sw}</b><br>Online: <b>${navigator.onLine ? 'ja' : 'nee'}</b><br>Blijvende opslag: <b>${persist}</b><br>Push mogelijk: <b>${'PushManager' in window ? 'ja' : 'nee (eerst op beginscherm zetten)'}</b>`;
+  dot('d-app', standalone() && navigator.serviceWorker?.controller ? 'ok' : 'busy');
+}
+
+/* ---------- 2. github ---------- */
+const gh = (path, opt = {}) => fetch(`https://api.github.com/repos/${CFG.repo}/${path}`, { ...opt, headers: { Authorization: 'Bearer ' + LS.get('ghtok'), Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.headers || {}) } });
+const b64 = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+const unb64 = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, '')), c => c.charCodeAt(0)));
+function ghSave() { const v = $('ghtok').value.trim(); if (!v) return; LS.set('ghtok', v); $('ghtok').value = ''; $('ghtok').placeholder = 'token bewaard'; ghRead() }
+async function ghRead() {
+  dot('d-gh', 'busy');
+  try {
+    const r = await gh('contents/reis/programma.md'); const j = await r.json();
+    if (!r.ok) throw new Error(r.status + ' ' + (j.message || ''));
+    show('ghout', unb64(j.content).split('\n').slice(0, 12).join('\n')); dot('d-gh', 'ok');
+  } catch (e) { show('ghout', 'Lezen mislukt: ' + e.message); dot('d-gh', 'bad') }
+}
+async function ghPut(path, text, message) {
+  let sha; const g = await gh('contents/' + path); if (g.ok) sha = (await g.json()).sha;
+  const r = await gh('contents/' + path, { method: 'PUT', body: JSON.stringify({ message, content: b64(text), ...(sha ? { sha } : {}) }) });
+  const j = await r.json(); if (!r.ok) throw new Error(r.status + ' ' + (j.message || '')); return j;
+}
+async function ghWrite() {
+  dot('d-gh', 'busy');
+  try {
+    const now = new Date().toISOString();
+    await ghPut('app/infra-test.md', `---\ngeschreven: ${now}\ndoor: ${navigator.userAgent}\n---\n\nTestbestand van de infra-testpagina.\n`, 'app: infra-test vanaf de iPhone');
+    show('ghout', 'Geschreven: app/infra-test.md om ' + now); dot('d-gh', 'ok');
+  } catch (e) { show('ghout', 'Schrijven mislukt: ' + e.message); dot('d-gh', 'bad') }
+}
+
+/* ---------- 3. t3 ---------- */
+const t3Base = () => LS.get('t3host');
+const t3 = (path, opt = {}) => fetch(t3Base() + path, { ...opt, headers: { Authorization: 'Bearer ' + LS.get('t3tok'), ...(opt.headers || {}) } });
+function t3View() {
+  const has = !!LS.get('t3tok'); $('t3pair').hidden = has; $('t3chat').hidden = !has;
+  if (has) { const exp = new Date(Number(LS.get('t3exp'))); $('t3info').innerHTML = `Gekoppeld. Token geldig tot <b>${exp.toLocaleDateString('nl-NL')}</b>.`; dot('d-t3', 'ok') } else dot('d-t3', '');
+}
+async function t3Pair() {
+  const raw = $('paircode').value.trim(); if (!raw) return; dot('d-t3', 'busy');
+  const [hostPart, code] = raw.includes('#') ? raw.split('#') : [LS.get('t3host'), raw];
+  if (!hostPart) { show('t3out', 'Plak de hele koppelcode (adres#code).'); dot('d-t3', 'bad'); return }
+  const host = (hostPart.startsWith('http') ? hostPart : 'https://' + hostPart).replace(/\/+$/, '');
+  try {
+    const body = new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange', subject_token: code,
+      subject_token_type: 'urn:t3:params:oauth:token-type:environment-bootstrap',
+      requested_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+      scope: 'orchestration:read orchestration:operate', client_label: 'Japan-app iPhone', client_device_type: 'mobile', client_os: 'iOS'
+    });
+    const r = await fetch(host + '/oauth/token', { method: 'POST', body }); const j = await r.json();
+    if (!r.ok || !j.access_token) throw new Error(r.status + ' ' + (j.reason || j.code || j.message || ''));
+    LS.set('t3host', host); LS.set('t3tok', j.access_token); LS.set('t3exp', String(Date.now() + j.expires_in * 1000)); $('paircode').value = '';
+    show('t3out', 'Gekoppeld, rechten: ' + j.scope); t3View();
+  } catch (e) { show('t3out', 'Koppelen mislukt: ' + e.message); dot('d-t3', 'bad') }
+}
+function t3Forget() { LS.del('t3tok'); LS.del('t3exp'); LS.del('t3thread'); t3View() }
+async function t3Dispatch(cmd) {
+  const r = await t3('/api/orchestration/dispatch', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...cmd, commandId: uuid(), createdAt: new Date().toISOString() }) });
+  if (!r.ok) throw new Error('dispatch ' + r.status + ' ' + (await r.text()).slice(0, 200));
+}
+async function t3Ask() {
+  const text = $('q').value.trim(); if (!text) return; $('askbtn').disabled = true; dot('d-t3', 'busy'); show('t3out', 'Versturen…');
+  const t0 = Date.now();
+  try {
+    let threadId = LS.get('t3thread');
+    if (!threadId) {
+      const s = await (await t3('/api/orchestration/shell')).json();
+      const p = (s.projects || []).find(p => p.title === CFG.project); if (!p) throw new Error('project ' + CFG.project + ' niet gevonden');
+      threadId = uuid();
+      await t3Dispatch({ type: 'thread.create', threadId, projectId: p.id, title: 'Infra-test vanaf de iPhone', modelSelection: { instanceId: 'claudeAgent', model: CFG.model }, runtimeMode: 'auto', interactionMode: 'default', branch: null, worktreePath: null });
+      LS.set('t3thread', threadId);
+    }
+    const messageId = uuid();
+    await t3Dispatch({ type: 'thread.turn.start', threadId, message: { messageId, role: 'user', text, attachments: [] }, runtimeMode: 'auto', interactionMode: 'default' });
+    show('t3out', 'Verstuurd, wachten op antwoord…');
+    for (let i = 0; i < 90; i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      const j = await (await t3('/api/orchestration/threads/' + threadId)).json();
+      const msgs = j.thread?.messages || []; const mine = msgs.findIndex(m => m.id === messageId || m.messageId === messageId);
+      const after = msgs.slice(mine >= 0 ? mine + 1 : msgs.length - 1).filter(m => m.role === 'assistant' && m.text);
+      const done = j.thread?.latestTurn?.state === 'completed' && after.length;
+      if (after.length) show('t3out', after.map(m => m.text).join('\n\n') + (done ? `\n\n(${((Date.now() - t0) / 1000).toFixed(1)} s)` : '\n\n…'));
+      if (done) { dot('d-t3', 'ok'); break }
+      if (j.thread?.latestTurn?.state === 'error' || j.thread?.session?.lastError) throw new Error(j.thread?.session?.lastError || 'turn error');
+    }
+  } catch (e) { show('t3out', 'Mislukt: ' + e.message); dot('d-t3', 'bad') }
+  $('askbtn').disabled = false;
+}
+
+/* ---------- 4. push ---------- */
+const keyBytes = b => Uint8Array.from(atob(b.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - b.length % 4) % 4)), c => c.charCodeAt(0));
+async function pushOn() {
+  dot('d-push', 'busy');
+  try {
+    if (!standalone()) throw new Error('open de app eerst vanaf het beginscherm');
+    if (!LS.get('ghtok')) throw new Error('stap 2 (GitHub-token) eerst');
+    const perm = await Notification.requestPermission(); if (perm !== 'granted') throw new Error('toestemming: ' + perm);
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(CFG.vapid) });
+    const rec = { ...sub.toJSON(), device: 'iPhone', savedAt: new Date().toISOString() };
+    await ghPut('app/push-subscription.json', JSON.stringify(rec, null, 2) + '\n', 'app: push-inschrijving bijgewerkt');
+    show('pushout', 'Ingeschreven bij ' + new URL(sub.endpoint).host + '. Laat de devserver nu een testmelding sturen.'); dot('d-push', 'ok');
+  } catch (e) { show('pushout', 'Mislukt: ' + e.message); dot('d-push', 'bad') }
+}
+
+$('ver').textContent = CFG.version;
+if (LS.get('ghtok')) $('ghtok').placeholder = 'token bewaard';
+appInfo(); t3View();
+addEventListener('online', appInfo); addEventListener('offline', appInfo);
+</script>
+</body>
+</html>
