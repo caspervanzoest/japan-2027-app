@@ -53,7 +53,7 @@ fn pull() -> Result<()> {
     git(&["pull", "--rebase", "--autostash", "--quiet"]).or_else(|e| {
         eprintln!("pull mislukt, opnieuw: {e}");
         std::thread::sleep(Duration::from_secs(3));
-        git(&["pull", "--rebase", "--autostash", "--quiet"]).map(|_| ())
+        git(&["pull", "--rebase", "--autostash", "--quiet"])
     })?;
     Ok(())
 }
