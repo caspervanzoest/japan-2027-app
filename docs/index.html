@@ -53,14 +53,14 @@ pre{white-space:pre-wrap;word-break:break-word;font-size:12px;background:#F4EEE3
 <div class="card">
   <h2><span class="dot" id="d-t3"></span>3. Assistent (T3 op de devserver)</h2>
   <div id="t3pair">
-    <p>Maak op de devserver een koppelcode met <b>japan-agent pair</b> (10 minuten geldig, één keer bruikbaar) en plak hem hier.</p>
+    <p>Plak een koppelcode van <b>japan-agent pair</b> (10 minuten geldig, één keer bruikbaar) of een token van de devserver, beide als <b>adres#…</b>.</p>
     <input id="paircode" placeholder="adres#code" autocapitalize="off" autocomplete="off" spellcheck="false">
     <div class="row"><button onclick="t3Pair()">Koppelen</button></div>
   </div>
   <div id="t3chat" hidden>
     <div class="kv" id="t3info"></div>
     <input id="q" value="Infra-test vanaf de iPhone: op welke dag kom ik in Hiroshima aan? Eén zin.">
-    <div class="row"><button id="askbtn" onclick="t3Ask()">Vraag</button><button class="sec" onclick="t3Forget()">Ontkoppel</button></div>
+    <div class="row"><button id="askbtn" onclick="t3Ask()">Vraag</button><button class="sec" onclick="t3Forget()">Ontkoppel</button><button class="sec" onclick="document.getElementById('t3pair').hidden=false">Nieuwe code of token</button></div>
   </div>
   <pre id="t3out" hidden></pre>
 </div>
@@ -80,7 +80,7 @@ const CFG = {
   project: 'japan-2027',
   model: 'claude-sonnet-5-5',
   vapid: 'BJJMJ1ddz3Xb-mg0PbcbRr97hkzm3VZW5tOFPx_r0rm9jVHXJMNxcC7OSUJ1PTcocDsKf_aPYGfYlwRJFq_91us',
-  version: 'infra-test 3 (protocol 2)',
+  version: 'infra-test 4 (protocol 2)',
 };
 const $ = id => document.getElementById(id);
 const LS = { get: k => localStorage.getItem('jp.' + k), set: (k, v) => localStorage.setItem('jp.' + k, v), del: k => localStorage.removeItem('jp.' + k) };
@@ -147,6 +147,14 @@ async function t3Pair() {
   if (!hostPart) { show('t3out', 'Plak de hele koppelcode (adres#code).'); dot('d-t3', 'bad'); return }
   const host = (hostPart.startsWith('http') ? hostPart : 'https://' + hostPart).replace(/\/+$/, '');
   try {
+    if (code.length > 40) {
+      // A bearer token issued on the devserver (for example the 1-year one): check it and store it as is.
+      const r = await fetch(host + '/api/auth/session', { headers: { Authorization: 'Bearer ' + code } });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.authenticated) throw new Error('token geweigerd (' + r.status + ')');
+      LS.set('t3host', host); LS.set('t3tok', code); LS.set('t3exp', String(Date.parse(j.expiresAt))); $('paircode').value = '';
+      show('t3out', 'Token bewaard, rechten: ' + (j.scopes || []).join(' ')); t3View(); return;
+    }
     const body = new URLSearchParams({
       grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange', subject_token: code,
       subject_token_type: 'urn:t3:params:oauth:token-type:environment-bootstrap',
@@ -159,6 +167,7 @@ async function t3Pair() {
     show('t3out', 'Gekoppeld, rechten: ' + j.scope); t3View();
   } catch (e) { show('t3out', 'Koppelen mislukt: ' + e.message); dot('d-t3', 'bad') }
 }
+
 function t3Forget() { LS.del('t3tok'); LS.del('t3exp'); LS.del('t3thread'); LS.del('t3thread2'); t3View() }
 // Protocol 2 (T3 0.1.0+): commands go over the WebSocket as Effect RPC; reads stay on HTTP.
 const P2 = { 'x-t3-orchestration-protocol': '2' };
