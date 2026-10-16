@@ -1,7 +1,7 @@
 // Service worker: app shell offline (stale-while-revalidate) and Web Push.
 // GitHub Pages sends max-age=600; without cache:'no-cache'/'reload' the SW would re-store a stale copy
 // from the HTTP cache and an update would take a few opens to arrive.
-const CACHE = 'jp-shell-v5';
+const CACHE = 'jp-shell-v6';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

@@ -2,77 +2,78 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#F6F1E8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Japan">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<title>Japan · infra-test</title>
+<title>Japan</title>
 <style>
-:root{--washi:#F6F1E8;--paper:#FFFDF8;--sumi:#1E1C19;--ink2:#5B5650;--line:#E4DCCD;--shu:#C8402A;--ai:#27395A;--ok:#5E7D3A;--warn:#B8862B}
+:root{--washi:#F6F1E8;--paper:#FFFDF8;--sumi:#1E1C19;--ink2:#5B5650;--line:#E4DCCD;--shu:#C8402A;--ai:#27395A}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,"SF Pro Text",system-ui,sans-serif;background:var(--washi);color:var(--sumi);padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 24px);font-size:15px}
-h1{font-size:26px;font-weight:800}
-.sub{color:var(--ink2);font-size:13px;margin:2px 0 14px}
-.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:13px;margin-bottom:12px}
-.card h2{font-size:16px;display:flex;align-items:center;gap:8px}
-.dot{width:11px;height:11px;border-radius:50%;background:#CFC5B3;flex:none}
-.dot.ok{background:var(--ok)}.dot.bad{background:var(--shu)}.dot.busy{background:var(--warn)}
-.card p{font-size:13px;color:var(--ink2);margin:6px 0 0;line-height:1.4}
-.row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-input,textarea{width:100%;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:#fff;margin-top:8px}
-button{font:inherit;font-weight:700;font-size:14px;border:none;border-radius:10px;padding:9px 12px;background:var(--sumi);color:#fff}
+html,body{height:100%}
+body{font-family:-apple-system,"SF Pro Text",system-ui,sans-serif;background:var(--washi);color:var(--sumi);font-size:16px;display:flex;flex-direction:column;height:100dvh}
+header{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;border-bottom:1px solid var(--line);background:var(--washi)}
+header h1{font-size:20px;font-weight:800;flex:1}
+button{font:inherit;font-weight:700;font-size:15px;border:none;border-radius:10px;padding:8px 12px;background:var(--sumi);color:#fff}
 button.sec{background:#EFE8DB;color:var(--sumi)}
-button:disabled{opacity:.45}
-pre{white-space:pre-wrap;word-break:break-word;font-size:12px;background:#F4EEE3;border-radius:10px;padding:8px;margin-top:8px;max-height:220px;overflow:auto}
-.kv{font-size:12.5px;color:var(--ink2);margin-top:6px;line-height:1.5}
-.kv b{color:var(--sumi)}
-.ver{font-size:11px;color:var(--ink2);text-align:center;margin-top:8px}
+button:disabled{opacity:.4}
+#log{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch}
+.msg{max-width:85%;padding:9px 12px;border-radius:16px;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.user{align-self:flex-end;background:var(--ai);color:#fff;border-bottom-right-radius:4px}
+.assistant{align-self:flex-start;background:var(--paper);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg a{color:inherit}
+.msg code{font-size:14px;background:#F4EEE3;border-radius:4px;padding:0 3px}
+.typing{align-self:flex-start;color:var(--ink2);font-size:14px;padding:4px 12px}
+.empty{margin:auto;color:var(--ink2);text-align:center;font-size:15px;max-width:260px}
+#status{font-size:13px;color:var(--shu);padding:0 12px 6px}
+footer{display:flex;gap:8px;align-items:flex-end;padding:8px 12px calc(env(safe-area-inset-bottom) + 8px);border-top:1px solid var(--line);background:var(--washi)}
+textarea{flex:1;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:18px;padding:8px 12px;background:#fff;resize:none;max-height:140px}
+#settings{position:fixed;inset:0;background:var(--washi);overflow-y:auto;padding:calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 24px)}
+#settings h2{font-size:16px;margin:18px 0 4px}
+#settings p,.kv{font-size:13px;color:var(--ink2);line-height:1.4;margin-top:4px}
+#settings input{width:100%;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:#fff;margin-top:8px}
+.row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 </style>
 </head>
 <body>
-<h1>Japan · infra-test</h1>
-<div class="sub">Controleert of alle verbindingen werken. Geen echte app.</div>
+<header>
+  <h1>Japan</h1>
+  <button class="sec" id="newbtn" onclick="newChat()">Nieuw gesprek</button>
+  <button class="sec" onclick="openSettings()" aria-label="Instellingen">⚙︎</button>
+</header>
+<main id="log"></main>
+<div id="status" hidden></div>
+<footer>
+  <textarea id="q" rows="1" placeholder="Vraag iets…"></textarea>
+  <button id="sendbtn" onclick="send()">Stuur</button>
+</footer>
 
-<div class="card" id="c-app">
-  <h2><span class="dot" id="d-app"></span>1. App en offline</h2>
-  <div class="kv" id="appinfo"></div>
-  <p>Zet deze pagina via Delen → "Zet op beginscherm" en open hem daar. Zet daarna vliegtuigmodus aan en open opnieuw: de pagina moet gewoon laden.</p>
-</div>
+<div id="settings" hidden>
+  <div class="row" style="justify-content:space-between;align-items:center;margin:0"><h1 style="font-size:22px">Instellingen</h1><button class="sec" onclick="closeSettings()">Klaar</button></div>
 
-<div class="card">
-  <h2><span class="dot" id="d-gh"></span>2. Reisdata (GitHub)</h2>
-  <p>Fine-grained token met alleen toegang tot <b>japan-2027</b>, Contents: Read and write. Blijft alleen op deze telefoon.</p>
+  <h2>Assistent (T3)</h2>
+  <div class="kv" id="t3info"></div>
+  <p>Plak een koppelcode van <b>japan-agent pair</b> of een token van de devserver, als <b>adres#…</b>.</p>
+  <input id="paircode" placeholder="adres#code" autocapitalize="off" autocomplete="off" spellcheck="false">
+  <div class="row"><button onclick="t3Pair()">Koppelen</button><button class="sec" onclick="t3Forget()">Ontkoppel</button></div>
+  <p id="t3out"></p>
+
+  <h2>Reisdata (GitHub)</h2>
+  <p>Fine-grained token voor <b>japan-2027</b>, Contents: Read and write. Nodig voor pushmeldingen.</p>
   <input id="ghtok" type="password" placeholder="github_pat_…" autocomplete="off">
-  <div class="row"><button onclick="ghSave()">Bewaar token</button><button class="sec" onclick="ghRead()">Lees programma</button><button class="sec" onclick="ghWrite()">Schrijf testbestand</button></div>
-  <pre id="ghout" hidden></pre>
-</div>
+  <div class="row"><button onclick="ghSave()">Bewaar token</button></div>
+  <p id="ghout"></p>
 
-<div class="card">
-  <h2><span class="dot" id="d-t3"></span>3. Assistent (T3 op de devserver)</h2>
-  <div id="t3pair">
-    <p>Plak een koppelcode van <b>japan-agent pair</b> (10 minuten geldig, één keer bruikbaar) of een token van de devserver, beide als <b>adres#…</b>.</p>
-    <input id="paircode" placeholder="adres#code" autocapitalize="off" autocomplete="off" spellcheck="false">
-    <div class="row"><button onclick="t3Pair()">Koppelen</button></div>
-  </div>
-  <div id="t3chat" hidden>
-    <div class="kv" id="t3info"></div>
-    <input id="q" value="Infra-test vanaf de iPhone: op welke dag kom ik in Hiroshima aan? Eén zin.">
-    <div class="row"><button id="askbtn" onclick="t3Ask()">Vraag</button><button class="sec" onclick="t3Forget()">Ontkoppel</button><button class="sec" onclick="document.getElementById('t3pair').hidden=false">Nieuwe code of token</button></div>
-  </div>
-  <pre id="t3out" hidden></pre>
-</div>
-
-<div class="card">
-  <h2><span class="dot" id="d-push"></span>4. Pushmeldingen</h2>
-  <p>Werkt alleen vanuit de app op het beginscherm. De inschrijving gaat naar de reisdata (stap 2 moet dus werken); daarna stuurt de devserver een testmelding.</p>
+  <h2>Pushmeldingen</h2>
+  <p>Werkt alleen vanuit de app op het beginscherm.</p>
   <div class="row"><button onclick="pushOn()">Meldingen aanzetten</button></div>
-  <pre id="pushout" hidden></pre>
-</div>
+  <p id="pushout"></p>
 
-<div class="ver" id="ver"></div>
+  <p class="kv" id="ver" style="margin-top:24px;text-align:center"></p>
+</div>
 
 <script>
 const CFG = {
@@ -80,46 +81,165 @@ const CFG = {
   project: 'japan-2027',
   model: 'claude-sonnet-5-5',
   vapid: 'BJJMJ1ddz3Xb-mg0PbcbRr97hkzm3VZW5tOFPx_r0rm9jVHXJMNxcC7OSUJ1PTcocDsKf_aPYGfYlwRJFq_91us',
-  version: 'infra-test 5 (protocol 2)',
+  version: 'chat 1 (protocol 2)',
 };
 const $ = id => document.getElementById(id);
 const LS = { get: k => localStorage.getItem('jp.' + k), set: (k, v) => localStorage.setItem('jp.' + k, v), del: k => localStorage.removeItem('jp.' + k) };
-const dot = (id, s) => { $(id).className = 'dot ' + (s || '') };
-const show = (id, t) => { const e = $(id); e.hidden = false; e.textContent = t };
 const uuid = () => crypto.randomUUID();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const status = t => { $('status').hidden = !t; $('status').textContent = t || '' };
 
-/* ---------- 1. app ---------- */
-async function appInfo() {
-  let sw = 'niet ondersteund';
-  if ('serviceWorker' in navigator) {
-    try {
-      const hadController = !!navigator.serviceWorker.controller;
-      // A new version took over (skipWaiting + claim): reload once so the page matches the new shell.
-      navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !sessionStorage.getItem('jp.reloaded')) { sessionStorage.setItem('jp.reloaded', '1'); location.reload() } });
-      const reg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }); reg.update();
-      sw = hadController ? 'actief' : 'geregistreerd (herlaad één keer)';
-    } catch (e) { sw = 'fout: ' + e.message }
-  }
-  let persist = '?';
-  try { persist = navigator.storage?.persist ? ((await navigator.storage.persist()) ? 'ja' : 'nee') : 'niet ondersteund' } catch { }
-  $('appinfo').innerHTML = `Op beginscherm: <b>${standalone() ? 'ja' : 'nee'}</b><br>Service worker: <b>${sw}</b><br>Online: <b>${navigator.onLine ? 'ja' : 'nee'}</b><br>Blijvende opslag: <b>${persist}</b><br>Push mogelijk: <b>${'PushManager' in window ? 'ja' : 'nee (eerst op beginscherm zetten)'}</b>`;
-  dot('d-app', standalone() && navigator.serviceWorker?.controller ? 'ok' : 'busy');
+/* ---------- service worker ---------- */
+if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  // A new version took over (skipWaiting + claim): reload once so the page matches the new shell.
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !sessionStorage.getItem('jp.reloaded')) { sessionStorage.setItem('jp.reloaded', '1'); location.reload() } });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => { });
+}
+navigator.storage?.persist?.().catch(() => { });
+
+/* ---------- t3 ---------- */
+const t3Base = () => LS.get('t3host');
+const t3 = (path, opt = {}) => fetch(t3Base() + path, { ...opt, headers: { Authorization: 'Bearer ' + LS.get('t3tok'), ...(opt.headers || {}) } });
+// Protocol 2 (T3 0.1.0+): commands go over the WebSocket as Effect RPC; reads stay on HTTP.
+const P2 = { 'x-t3-orchestration-protocol': '2' };
+async function t3Dispatch(cmd) {
+  const tr = await t3('/api/auth/websocket-ticket', { method: 'POST' });
+  if (tr.status === 401) throw new Error('koppeling verlopen of ingetrokken, koppel opnieuw');
+  if (!tr.ok) throw new Error('ticket ' + tr.status);
+  const { ticket } = await tr.json();
+  const ws = new WebSocket(t3Base().replace(/^http/, 'ws') + '/ws?orchestrationProtocol=2&wsTicket=' + encodeURIComponent(ticket));
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { ws.close(); reject(new Error('geen antwoord op commando')) }, 20000);
+    ws.onopen = () => ws.send(JSON.stringify({ _tag: 'Request', id: '1', tag: 'orchestration.dispatchCommand', payload: { ...cmd, commandId: uuid(), createdBy: 'user', creationSource: 'mobile' }, headers: [] }));
+    ws.onerror = () => { clearTimeout(timer); reject(new Error('geen verbinding met de assistent')) };
+    ws.onmessage = ev => {
+      const m = JSON.parse(ev.data);
+      if (m._tag === 'Ping') return ws.send(JSON.stringify({ _tag: 'Pong' }));
+      if (m._tag === 'Exit' && m.requestId === '1') {
+        clearTimeout(timer); ws.close();
+        m.exit?._tag === 'Success' ? resolve() : reject(new Error('commando geweigerd: ' + JSON.stringify(m.exit).slice(0, 200)));
+      }
+    };
+  });
 }
 
-/* ---------- 2. github ---------- */
+/* ---------- chat ---------- */
+const DONE = ['completed', 'failed', 'interrupted', 'cancelled'];
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// Just enough markdown to read Claude's answers; the real UI comes later.
+const md = s => esc(s)
+  .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+  .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>')
+  .replace(/\[([^\]\n]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+  .replace(/^#{1,4} (.*)$/gm, '<b>$1</b>');
+
+function render(msgs, note) {
+  const log = $('log'); const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
+  log.innerHTML = msgs.length || note ? msgs.map(m => `<div class="msg ${m.role}">${m.role === 'assistant' ? md(m.text) : esc(m.text)}</div>`).join('') + (note ? `<div class="typing">${esc(note)}</div>` : '')
+    : '<div class="empty">Stel een vraag over de reis, nu of onderweg.</div>';
+  if (atBottom) log.scrollTop = log.scrollHeight;
+}
+function renderCached(note) { render(JSON.parse(LS.get('msgs') || '[]'), note) }
+
+// Reads the thread and renders it. Returns true while the assistant is still working,
+// or while the run for a just-sent message (waitFor) has not shown up yet.
+async function load(waitFor) {
+  const id = LS.get('chat'); if (!id || !LS.get('t3tok')) { renderCached(); return false }
+  const r = await t3('/api/orchestration/threads/' + id, { headers: P2 });
+  if (r.status === 401) throw new Error('koppeling verlopen of ingetrokken, koppel opnieuw');
+  if (r.status === 404) { LS.del('chat'); LS.del('msgs'); renderCached(); return false }
+  if (!r.ok) throw new Error('gesprek laden: ' + r.status);
+  const pr = (await r.json()).projection || {};
+  const msgs = (pr.messages || []).filter(m => (m.role === 'user' || m.role === 'assistant') && m.text)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map(m => ({ role: m.role, text: m.text }));
+  const runs = pr.runs || []; const last = runs.at(-1);
+  const active = (!!waitFor && !runs.some(r => r.userMessageId === waitFor)) || (!!last && !DONE.includes(last.status));
+  LS.set('msgs', JSON.stringify(msgs.slice(-200)));
+  render(msgs, active ? 'aan het nadenken…' : last && last.status !== 'completed' ? `antwoord gestopt (${last.status})` : '');
+  return active;
+}
+let polling = false;
+async function poll(waitFor) {
+  if (polling) return; polling = true; $('sendbtn').disabled = true;
+  try { for (let i = 0; await load(i < 40 ? waitFor : null) && i < 1200; i++) await sleep(1500); status('') }
+  catch (e) { status(navigator.onLine ? e.message : 'offline: laatst bekende gesprek') }
+  polling = false; $('sendbtn').disabled = false;
+}
+
+async function send() {
+  const text = $('q').value.trim(); if (!text || polling) return;
+  if (!LS.get('t3tok')) { openSettings(); return }
+  $('sendbtn').disabled = true; status('');
+  const messageId = uuid();
+  const cached = JSON.parse(LS.get('msgs') || '[]'); render([...cached, { role: 'user', text }], 'versturen…');
+  try {
+    let threadId = LS.get('chat');
+    if (!threadId) {
+      const s = await (await t3('/api/orchestration/shell', { headers: P2 })).json();
+      const p = (s.projects || []).find(p => p.title === CFG.project); if (!p) throw new Error('project ' + CFG.project + ' niet gevonden');
+      threadId = uuid();
+      await t3Dispatch({ type: 'thread.create', threadId, projectId: p.id, title: 'iPhone ' + new Date().toLocaleDateString('nl-NL'), modelSelection: { instanceId: 'claudeAgent', model: CFG.model }, runtimeMode: 'auto', interactionMode: 'default', branch: null, worktreePath: null });
+      LS.set('chat', threadId);
+    }
+    await t3Dispatch({ type: 'message.dispatch', threadId, messageId, text, attachments: [], dispatchMode: { type: 'start_immediately' } });
+    $('q').value = ''; grow();
+  } catch (e) { renderCached(); status('Niet verstuurd: ' + e.message); $('sendbtn').disabled = false; return }
+  poll(messageId);
+}
+function newChat() { if (polling) return; LS.del('chat'); LS.del('msgs'); status(''); renderCached(); $('q').focus() }
+
+const grow = () => { const q = $('q'); q.style.height = 'auto'; q.style.height = q.scrollHeight + 'px' };
+$('q').addEventListener('input', grow);
+// Desktop: Enter sends, Shift+Enter is a new line. On the iPhone Return stays a new line.
+$('q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !matchMedia('(pointer: coarse)').matches) { e.preventDefault(); send() } });
+// The run keeps going on the server while the app is in the background: pick up the answer on return.
+document.addEventListener('visibilitychange', () => { if (!document.hidden) poll() });
+addEventListener('online', poll);
+
+/* ---------- settings ---------- */
+function openSettings() { t3View(); $('settings').hidden = false }
+function closeSettings() { $('settings').hidden = true; poll() }
+function t3View() {
+  $('t3info').innerHTML = LS.get('t3tok') ? `Gekoppeld, geldig tot <b>${new Date(Number(LS.get('t3exp'))).toLocaleDateString('nl-NL')}</b>.` : 'Niet gekoppeld.';
+  $('ghtok').placeholder = LS.get('ghtok') ? 'token bewaard' : 'github_pat_…';
+}
+async function t3Pair() {
+  const raw = $('paircode').value.trim(); if (!raw) return;
+  const [hostPart, code] = raw.includes('#') ? raw.split('#') : [LS.get('t3host'), raw];
+  if (!hostPart) { $('t3out').textContent = 'Plak de hele koppelcode (adres#code).'; return }
+  const host = (hostPart.startsWith('http') ? hostPart : 'https://' + hostPart).replace(/\/+$/, '');
+  try {
+    if (code.length > 40) {
+      // A bearer token issued on the devserver (for example the 1-year one): check it and store it as is.
+      const r = await fetch(host + '/api/auth/session', { headers: { Authorization: 'Bearer ' + code } });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.authenticated) throw new Error('token geweigerd (' + r.status + ')');
+      LS.set('t3host', host); LS.set('t3tok', code); LS.set('t3exp', String(Date.parse(j.expiresAt)));
+    } else {
+      const body = new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange', subject_token: code,
+        subject_token_type: 'urn:t3:params:oauth:token-type:environment-bootstrap',
+        requested_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+        scope: 'orchestration:read orchestration:operate', client_label: 'Japan-app iPhone', client_device_type: 'mobile', client_os: 'iOS'
+      });
+      const r = await fetch(host + '/oauth/token', { method: 'POST', body }); const j = await r.json();
+      if (!r.ok || !j.access_token) throw new Error(r.status + ' ' + (j.reason || j.code || j.message || ''));
+      LS.set('t3host', host); LS.set('t3tok', j.access_token); LS.set('t3exp', String(Date.now() + j.expires_in * 1000));
+    }
+    $('paircode').value = ''; $('t3out').textContent = 'Gekoppeld.'; t3View();
+  } catch (e) { $('t3out').textContent = 'Koppelen mislukt: ' + e.message }
+}
+function t3Forget() { LS.del('t3tok'); LS.del('t3exp'); LS.del('chat'); LS.del('msgs'); t3View(); renderCached() }
+
 // cache: 'no-store': the contents API allows 60 s browser caching, which hands out a stale sha and makes the next PUT fail with 409.
 const gh = (path, opt = {}) => fetch(`https://api.github.com/repos/${CFG.repo}/${path}`, { cache: 'no-store', ...opt, headers: { Authorization: 'Bearer ' + LS.get('ghtok'), Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.headers || {}) } });
 const b64 = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
-const unb64 = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, '')), c => c.charCodeAt(0)));
-function ghSave() { const v = $('ghtok').value.trim(); if (!v) return; LS.set('ghtok', v); $('ghtok').value = ''; $('ghtok').placeholder = 'token bewaard'; ghRead() }
-async function ghRead() {
-  dot('d-gh', 'busy');
-  try {
-    const r = await gh('contents/reis/programma.md'); const j = await r.json();
-    if (!r.ok) throw new Error(r.status + ' ' + (j.message || ''));
-    show('ghout', unb64(j.content).split('\n').slice(0, 12).join('\n')); dot('d-gh', 'ok');
-  } catch (e) { show('ghout', 'Lezen mislukt: ' + e.message); dot('d-gh', 'bad') }
+async function ghSave() {
+  const v = $('ghtok').value.trim(); if (!v) return; LS.set('ghtok', v); $('ghtok').value = ''; t3View();
+  const r = await gh('contents/reis/programma.md').catch(() => null);
+  $('ghout').textContent = r?.ok ? 'Token bewaard en werkt.' : 'Token bewaard, maar lezen lukt niet' + (r ? ' (' + r.status + ')' : '') + '.';
 }
 async function ghPut(path, text, message) {
   for (let attempt = 0; ; attempt++) {
@@ -131,119 +251,23 @@ async function ghPut(path, text, message) {
     throw new Error(r.status + ' ' + (j.message || ''));
   }
 }
-async function ghWrite() {
-  dot('d-gh', 'busy');
-  try {
-    const now = new Date().toISOString();
-    await ghPut('app/infra-test.md', `---\ngeschreven: ${now}\ndoor: ${navigator.userAgent}\n---\n\nTestbestand van de infra-testpagina.\n`, 'app: infra-test vanaf de iPhone');
-    show('ghout', 'Geschreven: app/infra-test.md om ' + now); dot('d-gh', 'ok');
-  } catch (e) { show('ghout', 'Schrijven mislukt: ' + e.message); dot('d-gh', 'bad') }
-}
 
-/* ---------- 3. t3 ---------- */
-const t3Base = () => LS.get('t3host');
-const t3 = (path, opt = {}) => fetch(t3Base() + path, { ...opt, headers: { Authorization: 'Bearer ' + LS.get('t3tok'), ...(opt.headers || {}) } });
-function t3View() {
-  const has = !!LS.get('t3tok'); $('t3pair').hidden = has; $('t3chat').hidden = !has;
-  if (has) { const exp = new Date(Number(LS.get('t3exp'))); $('t3info').innerHTML = `Gekoppeld. Token geldig tot <b>${exp.toLocaleDateString('nl-NL')}</b>.`; dot('d-t3', 'ok') } else dot('d-t3', '');
-}
-async function t3Pair() {
-  const raw = $('paircode').value.trim(); if (!raw) return; dot('d-t3', 'busy');
-  const [hostPart, code] = raw.includes('#') ? raw.split('#') : [LS.get('t3host'), raw];
-  if (!hostPart) { show('t3out', 'Plak de hele koppelcode (adres#code).'); dot('d-t3', 'bad'); return }
-  const host = (hostPart.startsWith('http') ? hostPart : 'https://' + hostPart).replace(/\/+$/, '');
-  try {
-    if (code.length > 40) {
-      // A bearer token issued on the devserver (for example the 1-year one): check it and store it as is.
-      const r = await fetch(host + '/api/auth/session', { headers: { Authorization: 'Bearer ' + code } });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || !j.authenticated) throw new Error('token geweigerd (' + r.status + ')');
-      LS.set('t3host', host); LS.set('t3tok', code); LS.set('t3exp', String(Date.parse(j.expiresAt))); $('paircode').value = '';
-      show('t3out', 'Token bewaard, rechten: ' + (j.scopes || []).join(' ')); t3View(); return;
-    }
-    const body = new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange', subject_token: code,
-      subject_token_type: 'urn:t3:params:oauth:token-type:environment-bootstrap',
-      requested_token_type: 'urn:ietf:params:oauth:token-type:access_token',
-      scope: 'orchestration:read orchestration:operate', client_label: 'Japan-app iPhone', client_device_type: 'mobile', client_os: 'iOS'
-    });
-    const r = await fetch(host + '/oauth/token', { method: 'POST', body }); const j = await r.json();
-    if (!r.ok || !j.access_token) throw new Error(r.status + ' ' + (j.reason || j.code || j.message || ''));
-    LS.set('t3host', host); LS.set('t3tok', j.access_token); LS.set('t3exp', String(Date.now() + j.expires_in * 1000)); $('paircode').value = '';
-    show('t3out', 'Gekoppeld, rechten: ' + j.scope); t3View();
-  } catch (e) { show('t3out', 'Koppelen mislukt: ' + e.message); dot('d-t3', 'bad') }
-}
-
-function t3Forget() { LS.del('t3tok'); LS.del('t3exp'); LS.del('t3thread'); LS.del('t3thread2'); t3View() }
-// Protocol 2 (T3 0.1.0+): commands go over the WebSocket as Effect RPC; reads stay on HTTP.
-const P2 = { 'x-t3-orchestration-protocol': '2' };
-async function t3Dispatch(cmd) {
-  const tr = await t3('/api/auth/websocket-ticket', { method: 'POST' });
-  if (!tr.ok) throw new Error('ticket ' + tr.status);
-  const { ticket } = await tr.json();
-  const ws = new WebSocket(t3Base().replace(/^http/, 'ws') + '/ws?orchestrationProtocol=2&wsTicket=' + encodeURIComponent(ticket));
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => { ws.close(); reject(new Error('geen antwoord op commando')) }, 20000);
-    ws.onopen = () => ws.send(JSON.stringify({ _tag: 'Request', id: '1', tag: 'orchestration.dispatchCommand', payload: { ...cmd, commandId: uuid(), createdBy: 'user', creationSource: 'mobile' }, headers: [] }));
-    ws.onerror = () => { clearTimeout(timer); reject(new Error('websocket-fout')) };
-    ws.onmessage = ev => {
-      const m = JSON.parse(ev.data);
-      if (m._tag === 'Ping') return ws.send(JSON.stringify({ _tag: 'Pong' }));
-      if (m._tag === 'Exit' && m.requestId === '1') {
-        clearTimeout(timer); ws.close();
-        m.exit?._tag === 'Success' ? resolve() : reject(new Error('commando geweigerd: ' + JSON.stringify(m.exit).slice(0, 200)));
-      }
-    };
-  });
-}
-async function t3Ask() {
-  const text = $('q').value.trim(); if (!text) return; $('askbtn').disabled = true; dot('d-t3', 'busy'); show('t3out', 'Versturen…');
-  const t0 = Date.now();
-  try {
-    let threadId = LS.get('t3thread2');
-    if (!threadId) {
-      const s = await (await t3('/api/orchestration/shell', { headers: P2 })).json();
-      const p = (s.projects || []).find(p => p.title === CFG.project); if (!p) throw new Error('project ' + CFG.project + ' niet gevonden');
-      threadId = uuid();
-      await t3Dispatch({ type: 'thread.create', threadId, projectId: p.id, title: 'Infra-test vanaf de iPhone', modelSelection: { instanceId: 'claudeAgent', model: CFG.model }, runtimeMode: 'auto', interactionMode: 'default', branch: null, worktreePath: null });
-      LS.set('t3thread2', threadId);
-    }
-    const messageId = uuid();
-    await t3Dispatch({ type: 'message.dispatch', threadId, messageId, text, attachments: [], dispatchMode: { type: 'start_immediately' } });
-    show('t3out', 'Verstuurd, wachten op antwoord…');
-    for (let i = 0; i < 90; i++) {
-      await new Promise(r => setTimeout(r, 2000));
-      const pr = (await (await t3('/api/orchestration/threads/' + threadId, { headers: P2 })).json()).projection || {};
-      const run = (pr.runs || []).find(r => r.userMessageId === messageId);
-      const answer = run ? (pr.messages || []).filter(m => m.runId === run.id && m.role === 'assistant' && m.text).map(m => m.text).join('\n\n') : '';
-      const done = run && ['completed', 'failed', 'interrupted', 'cancelled'].includes(run.status);
-      if (answer) show('t3out', answer + (done ? `\n\n(${((Date.now() - t0) / 1000).toFixed(1)} s)` : '\n\n…'));
-      if (done) { if (run.status !== 'completed') throw new Error('run ' + run.status); dot('d-t3', 'ok'); break }
-    }
-  } catch (e) { show('t3out', 'Mislukt: ' + e.message); dot('d-t3', 'bad') }
-  $('askbtn').disabled = false;
-}
-
-/* ---------- 4. push ---------- */
 const keyBytes = b => Uint8Array.from(atob(b.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - b.length % 4) % 4)), c => c.charCodeAt(0));
 async function pushOn() {
-  dot('d-push', 'busy');
   try {
     if (!standalone()) throw new Error('open de app eerst vanaf het beginscherm');
-    if (!LS.get('ghtok')) throw new Error('stap 2 (GitHub-token) eerst');
+    if (!LS.get('ghtok')) throw new Error('eerst het GitHub-token');
     const perm = await Notification.requestPermission(); if (perm !== 'granted') throw new Error('toestemming: ' + perm);
     const reg = await navigator.serviceWorker.ready;
     const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(CFG.vapid) });
-    const rec = { ...sub.toJSON(), device: 'iPhone', savedAt: new Date().toISOString() };
-    await ghPut('app/push-subscription.json', JSON.stringify(rec, null, 2) + '\n', 'app: push-inschrijving bijgewerkt');
-    show('pushout', 'Ingeschreven bij ' + new URL(sub.endpoint).host + '. Laat de devserver nu een testmelding sturen.'); dot('d-push', 'ok');
-  } catch (e) { show('pushout', 'Mislukt: ' + e.message); dot('d-push', 'bad') }
+    await ghPut('app/push-subscription.json', JSON.stringify({ ...sub.toJSON(), device: 'iPhone', savedAt: new Date().toISOString() }, null, 2) + '\n', 'app: push-inschrijving bijgewerkt');
+    $('pushout').textContent = 'Meldingen staan aan.';
+  } catch (e) { $('pushout').textContent = 'Mislukt: ' + e.message }
 }
 
 $('ver').textContent = CFG.version;
-if (LS.get('ghtok')) $('ghtok').placeholder = 'token bewaard';
-appInfo(); t3View();
-addEventListener('online', appInfo); addEventListener('offline', appInfo);
+renderCached();
+if (LS.get('t3tok')) poll(); else openSettings();
 </script>
 </body>
 </html>
