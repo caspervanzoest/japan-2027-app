@@ -29,18 +29,38 @@ fn config_dir() -> PathBuf {
     env::var_os("JAPAN_CONFIG").map(PathBuf::from).unwrap_or_else(|| home().join(".config/japan-2027"))
 }
 
+/// Runs git in the data repo under an exclusive lock, so the sync timer and a push never fetch at the same
+/// time (concurrent fetches can leave FETCH_HEAD with several entries: "Cannot rebase onto multiple branches").
 fn git(args: &[&str]) -> Result<String> {
-    let out = Command::new("git").arg("-C").arg(data_dir()).args(args).output().context("git starten")?;
+    let dir = data_dir();
+    let out = Command::new("flock")
+        .arg(dir.join(".git/japan-agent.lock"))
+        .arg("git")
+        .arg("-C")
+        .arg(&dir)
+        .args(args)
+        .output()
+        .context("git starten")?;
     if !out.status.success() {
         bail!("git {}: {}", args.join(" "), String::from_utf8_lossy(&out.stderr).trim());
     }
     Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
 
-/// Pull with rebase (autostash keeps uncommitted edits of a running Claude turn intact),
-/// then push when there are local commits.
+/// Pull with rebase; autostash keeps uncommitted edits of a running Claude turn intact.
+/// Claude's own git commands do not take our lock, so one retry covers a collision with them.
+fn pull() -> Result<()> {
+    git(&["pull", "--rebase", "--autostash", "--quiet"]).or_else(|e| {
+        eprintln!("pull mislukt, opnieuw: {e}");
+        std::thread::sleep(Duration::from_secs(3));
+        git(&["pull", "--rebase", "--autostash", "--quiet"]).map(|_| ())
+    })?;
+    Ok(())
+}
+
+/// Pull, then push when there are local commits.
 fn sync() -> Result<()> {
-    git(&["pull", "--rebase", "--autostash", "--quiet"])?;
+    pull()?;
     let ahead: u32 = git(&["rev-list", "--count", "@{u}..HEAD"])?.parse().unwrap_or(0);
     if ahead > 0 {
         git(&["push", "--quiet"])?;
@@ -65,7 +85,7 @@ struct SubscriptionKeys {
 
 fn push(title: &str, body: &str, url: Option<&str>) -> Result<()> {
     // Best effort: the PWA may have just written a new subscription.
-    if let Err(e) = git(&["pull", "--rebase", "--autostash", "--quiet"]) {
+    if let Err(e) = pull() {
         eprintln!("waarschuwing: pull mislukt, gebruik lokale kopie: {e}");
     }
     let path = data_dir().join("app/push-subscription.json");
