@@ -80,7 +80,7 @@ const CFG = {
   project: 'japan-2027',
   model: 'claude-sonnet-5-5',
   vapid: 'BJJMJ1ddz3Xb-mg0PbcbRr97hkzm3VZW5tOFPx_r0rm9jVHXJMNxcC7OSUJ1PTcocDsKf_aPYGfYlwRJFq_91us',
-  version: 'infra-test 4 (protocol 2)',
+  version: 'infra-test 5 (protocol 2)',
 };
 const $ = id => document.getElementById(id);
 const LS = { get: k => localStorage.getItem('jp.' + k), set: (k, v) => localStorage.setItem('jp.' + k, v), del: k => localStorage.removeItem('jp.' + k) };
@@ -93,7 +93,13 @@ const standalone = () => matchMedia('(display-mode: standalone)').matches || nav
 async function appInfo() {
   let sw = 'niet ondersteund';
   if ('serviceWorker' in navigator) {
-    try { await navigator.serviceWorker.register('sw.js'); sw = navigator.serviceWorker.controller ? 'actief' : 'geregistreerd (herlaad één keer)'; } catch (e) { sw = 'fout: ' + e.message }
+    try {
+      const hadController = !!navigator.serviceWorker.controller;
+      // A new version took over (skipWaiting + claim): reload once so the page matches the new shell.
+      navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !sessionStorage.getItem('jp.reloaded')) { sessionStorage.setItem('jp.reloaded', '1'); location.reload() } });
+      const reg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }); reg.update();
+      sw = hadController ? 'actief' : 'geregistreerd (herlaad één keer)';
+    } catch (e) { sw = 'fout: ' + e.message }
   }
   let persist = '?';
   try { persist = navigator.storage?.persist ? ((await navigator.storage.persist()) ? 'ja' : 'nee') : 'niet ondersteund' } catch { }
