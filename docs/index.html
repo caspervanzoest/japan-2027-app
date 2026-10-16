@@ -80,7 +80,7 @@ const CFG = {
   project: 'japan-2027',
   model: 'claude-sonnet-5-5',
   vapid: 'BJJMJ1ddz3Xb-mg0PbcbRr97hkzm3VZW5tOFPx_r0rm9jVHXJMNxcC7OSUJ1PTcocDsKf_aPYGfYlwRJFq_91us',
-  version: 'infra-test 2',
+  version: 'infra-test 3 (protocol 2)',
 };
 const $ = id => document.getElementById(id);
 const LS = { get: k => localStorage.getItem('jp.' + k), set: (k, v) => localStorage.setItem('jp.' + k, v), del: k => localStorage.removeItem('jp.' + k) };
@@ -159,35 +159,51 @@ async function t3Pair() {
     show('t3out', 'Gekoppeld, rechten: ' + j.scope); t3View();
   } catch (e) { show('t3out', 'Koppelen mislukt: ' + e.message); dot('d-t3', 'bad') }
 }
-function t3Forget() { LS.del('t3tok'); LS.del('t3exp'); LS.del('t3thread'); t3View() }
+function t3Forget() { LS.del('t3tok'); LS.del('t3exp'); LS.del('t3thread'); LS.del('t3thread2'); t3View() }
+// Protocol 2 (T3 0.1.0+): commands go over the WebSocket as Effect RPC; reads stay on HTTP.
+const P2 = { 'x-t3-orchestration-protocol': '2' };
 async function t3Dispatch(cmd) {
-  const r = await t3('/api/orchestration/dispatch', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...cmd, commandId: uuid(), createdAt: new Date().toISOString() }) });
-  if (!r.ok) throw new Error('dispatch ' + r.status + ' ' + (await r.text()).slice(0, 200));
+  const tr = await t3('/api/auth/websocket-ticket', { method: 'POST' });
+  if (!tr.ok) throw new Error('ticket ' + tr.status);
+  const { ticket } = await tr.json();
+  const ws = new WebSocket(t3Base().replace(/^http/, 'ws') + '/ws?orchestrationProtocol=2&wsTicket=' + encodeURIComponent(ticket));
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { ws.close(); reject(new Error('geen antwoord op commando')) }, 20000);
+    ws.onopen = () => ws.send(JSON.stringify({ _tag: 'Request', id: '1', tag: 'orchestration.dispatchCommand', payload: { ...cmd, commandId: uuid(), createdBy: 'user', creationSource: 'mobile' }, headers: [] }));
+    ws.onerror = () => { clearTimeout(timer); reject(new Error('websocket-fout')) };
+    ws.onmessage = ev => {
+      const m = JSON.parse(ev.data);
+      if (m._tag === 'Ping') return ws.send(JSON.stringify({ _tag: 'Pong' }));
+      if (m._tag === 'Exit' && m.requestId === '1') {
+        clearTimeout(timer); ws.close();
+        m.exit?._tag === 'Success' ? resolve() : reject(new Error('commando geweigerd: ' + JSON.stringify(m.exit).slice(0, 200)));
+      }
+    };
+  });
 }
 async function t3Ask() {
   const text = $('q').value.trim(); if (!text) return; $('askbtn').disabled = true; dot('d-t3', 'busy'); show('t3out', 'Versturen…');
   const t0 = Date.now();
   try {
-    let threadId = LS.get('t3thread');
+    let threadId = LS.get('t3thread2');
     if (!threadId) {
-      const s = await (await t3('/api/orchestration/shell')).json();
+      const s = await (await t3('/api/orchestration/shell', { headers: P2 })).json();
       const p = (s.projects || []).find(p => p.title === CFG.project); if (!p) throw new Error('project ' + CFG.project + ' niet gevonden');
       threadId = uuid();
       await t3Dispatch({ type: 'thread.create', threadId, projectId: p.id, title: 'Infra-test vanaf de iPhone', modelSelection: { instanceId: 'claudeAgent', model: CFG.model }, runtimeMode: 'auto', interactionMode: 'default', branch: null, worktreePath: null });
-      LS.set('t3thread', threadId);
+      LS.set('t3thread2', threadId);
     }
     const messageId = uuid();
-    await t3Dispatch({ type: 'thread.turn.start', threadId, message: { messageId, role: 'user', text, attachments: [] }, runtimeMode: 'auto', interactionMode: 'default' });
+    await t3Dispatch({ type: 'message.dispatch', threadId, messageId, text, attachments: [], dispatchMode: { type: 'start_immediately' } });
     show('t3out', 'Verstuurd, wachten op antwoord…');
     for (let i = 0; i < 90; i++) {
       await new Promise(r => setTimeout(r, 2000));
-      const j = await (await t3('/api/orchestration/threads/' + threadId)).json();
-      const msgs = j.thread?.messages || []; const mine = msgs.findIndex(m => m.id === messageId || m.messageId === messageId);
-      const after = msgs.slice(mine >= 0 ? mine + 1 : msgs.length - 1).filter(m => m.role === 'assistant' && m.text);
-      const done = j.thread?.latestTurn?.state === 'completed' && after.length;
-      if (after.length) show('t3out', after.map(m => m.text).join('\n\n') + (done ? `\n\n(${((Date.now() - t0) / 1000).toFixed(1)} s)` : '\n\n…'));
-      if (done) { dot('d-t3', 'ok'); break }
-      if (j.thread?.latestTurn?.state === 'error' || j.thread?.session?.lastError) throw new Error(j.thread?.session?.lastError || 'turn error');
+      const pr = (await (await t3('/api/orchestration/threads/' + threadId, { headers: P2 })).json()).projection || {};
+      const run = (pr.runs || []).find(r => r.userMessageId === messageId);
+      const answer = run ? (pr.messages || []).filter(m => m.runId === run.id && m.role === 'assistant' && m.text).map(m => m.text).join('\n\n') : '';
+      const done = run && ['completed', 'failed', 'interrupted', 'cancelled'].includes(run.status);
+      if (answer) show('t3out', answer + (done ? `\n\n(${((Date.now() - t0) / 1000).toFixed(1)} s)` : '\n\n…'));
+      if (done) { if (run.status !== 'completed') throw new Error('run ' + run.status); dot('d-t3', 'ok'); break }
     }
   } catch (e) { show('t3out', 'Mislukt: ' + e.message); dot('d-t3', 'bad') }
   $('askbtn').disabled = false;

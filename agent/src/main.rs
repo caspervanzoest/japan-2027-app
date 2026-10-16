@@ -139,7 +139,9 @@ fn pair() -> Result<()> {
         .or(bins.last())
         .context("geen T3-binary gevonden")?;
     let out = Command::new(bin)
-        .args(["auth", "pairing", "create", "--ttl", "10m", "--label", "japan-pwa", "--json", "--base-dir"])
+        .args(["auth", "pairing", "create", "--ttl", "10m", "--label", "japan-pwa", "--json"])
+        // Limit the credential itself (T3 0.1.0+), not only the scope the PWA asks for when exchanging it.
+        .args(["--scope", "orchestration:read", "--scope", "orchestration:operate", "--base-dir"])
         .arg(&t3_home)
         .output()
         .context("t3 starten")?;
