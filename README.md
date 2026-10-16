@@ -2,10 +2,46 @@
 
 Persoonlijke reisapp voor een reis door Japan in 2027. Een PWA die je op het beginscherm van een iPhone zet, plus een klein hulpprogramma voor de server.
 
-Deze repo bevat alleen code. De reisdata staat in een aparte privérepo. De app laadt die pas als je een eigen token invult.
+Deze repo bevat alleen code. De reisdata staat in een aparte privérepo. De app laadt die pas als je een eigen token invult. Beheer en tokens staan beschreven in de privérepo.
 
-- `docs/`: de PWA, gepubliceerd via GitHub Pages. Voor nu is het een testpagina die nagaat of alle verbindingen werken: installeren en offline, de reisdata op GitHub, de AI-assistent en pushmeldingen.
+## Onderdelen
+
+- `docs/`: de PWA, gepubliceerd via GitHub Pages (branch `main`, map `/docs`). Voor nu is het een testpagina die vier dingen nagaat: installeren en offline, de reisdata op GitHub, de AI-assistent en pushmeldingen.
 - `agent/`: `japan-agent`, een Rust-programma dat op de server draait.
-  - `sync` houdt de reisdata gelijk met GitHub.
-  - `pair` maakt een eenmalige koppelcode voor de app.
-  - `push` stuurt een pushmelding.
+
+## Hoe de PWA werkt
+
+**Reisdata.** De app gebruikt de contents-API van GitHub, met een fine-grained token dat alleen bij de privérepo kan. Hij leest met `cache: 'no-store'`, want GitHub laat de browser antwoorden 60 seconden bewaren en een verouderde `sha` geeft bij het schrijven een 409. Bij een 409 haalt de app de nieuwe `sha` op en probeert het opnieuw.
+
+**Assistent.** De app praat met een eigen T3 Code-server (T3 0.1.0, orchestratieprotocol 2), bereikbaar via T3 Connect. Het is de interne API van T3, die per versie kan veranderen. Daarom staat de T3-versie op de server vast.
+
+- Koppelen: de gebruiker plakt `adres#code` of `adres#token`.
+  - Een `code` is een eenmalige pairingcode. Die wisselt de app in via `POST /oauth/token` (token-exchange, `subject_token_type=urn:t3:params:oauth:token-type:environment-bootstrap`, `scope=orchestration:read orchestration:operate`) voor een bearer-token van 30 dagen.
+  - Een langer `token` controleert de app met `GET /api/auth/session` en bewaart hij zoals het is.
+- Een bericht sturen: `POST /api/auth/websocket-ticket`, dan een WebSocket naar `/ws?orchestrationProtocol=2&wsTicket=…`. Commando's gaan als Effect RPC (`{_tag:"Request", id, tag:"orchestration.dispatchCommand", payload, headers:[]}`), eerst `thread.create`, dan `message.dispatch`. Op `Ping` antwoordt de app met `Pong`. Een HTTP-route voor commando's bestaat in protocol 2 niet meer.
+- Het antwoord lezen: `GET /api/orchestration/threads/:id` met `x-t3-orchestration-protocol: 2`, elke 2 seconden. Het antwoord is klaar als in `projection.runs` de run bij het eigen bericht (`userMessageId`) status `completed` heeft. Het antwoord zijn de assistentberichten in `projection.messages` met die `runId`.
+- CORS staat op de T3-server open voor elke origin.
+
+**Offline.** De service worker bewaart de app-schil (stale-while-revalidate) en laat API-verzoeken met rust. GitHub Pages stuurt `max-age=600`. Daarom vraagt de service worker altijd met `cache: 'no-cache'` en installeert hij met `cache: 'reload'`, anders kan een update tot 10 minuten en een paar keer openen uitblijven. Wordt een nieuwe versie actief, dan herlaadt de pagina zich één keer.
+
+**Push.** Web Push met VAPID. De app schrijft zijn inschrijving naar de privérepo (`app/push-subscription.json`). Op iOS kan dat alleen vanuit de app op het beginscherm.
+
+Tokens staan in `localStorage`. Die opslag is gedeeld met alle Pages-sites onder hetzelfde `*.github.io`-adres.
+
+## japan-agent
+
+```bash
+cd agent && cargo install --path . --root ~/.cargo
+```
+
+| Opdracht | Doet |
+|---|---|
+| `japan-agent sync` | `git pull --rebase --autostash` in de reisdatarepo, daarna pushen als er lokale commits zijn. Alle git-acties lopen via `flock`, omdat gelijktijdige fetches anders "Cannot rebase onto multiple branches" geven. |
+| `japan-agent pair` | Eenmalige pairingcode van 10 minuten, beperkt tot `orchestration:read/operate`. Drukt `adres#code` af. |
+| `japan-agent push <titel> <tekst> [url]` | Pushmelding naar de opgeslagen inschrijving. Bij 404 of 410 is de inschrijving verlopen. |
+
+Instellingen via omgevingsvariabelen:
+
+- `JAPAN_DATA`: de reisdatarepo
+- `JAPAN_CONFIG`: map met `vapid-private-pkcs8.pem` en `t3-host`
+- `JAPAN_T3_HOME`: datamap van de T3-server
