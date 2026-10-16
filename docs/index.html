@@ -80,7 +80,7 @@ const CFG = {
   project: 'japan-2027',
   model: 'claude-sonnet-5-5',
   vapid: 'BJJMJ1ddz3Xb-mg0PbcbRr97hkzm3VZW5tOFPx_r0rm9jVHXJMNxcC7OSUJ1PTcocDsKf_aPYGfYlwRJFq_91us',
-  version: 'infra-test 1',
+  version: 'infra-test 2',
 };
 const $ = id => document.getElementById(id);
 const LS = { get: k => localStorage.getItem('jp.' + k), set: (k, v) => localStorage.setItem('jp.' + k, v), del: k => localStorage.removeItem('jp.' + k) };
@@ -102,7 +102,8 @@ async function appInfo() {
 }
 
 /* ---------- 2. github ---------- */
-const gh = (path, opt = {}) => fetch(`https://api.github.com/repos/${CFG.repo}/${path}`, { ...opt, headers: { Authorization: 'Bearer ' + LS.get('ghtok'), Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.headers || {}) } });
+// cache: 'no-store': the contents API allows 60 s browser caching, which hands out a stale sha and makes the next PUT fail with 409.
+const gh = (path, opt = {}) => fetch(`https://api.github.com/repos/${CFG.repo}/${path}`, { cache: 'no-store', ...opt, headers: { Authorization: 'Bearer ' + LS.get('ghtok'), Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.headers || {}) } });
 const b64 = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
 const unb64 = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, '')), c => c.charCodeAt(0)));
 function ghSave() { const v = $('ghtok').value.trim(); if (!v) return; LS.set('ghtok', v); $('ghtok').value = ''; $('ghtok').placeholder = 'token bewaard'; ghRead() }
@@ -115,9 +116,14 @@ async function ghRead() {
   } catch (e) { show('ghout', 'Lezen mislukt: ' + e.message); dot('d-gh', 'bad') }
 }
 async function ghPut(path, text, message) {
-  let sha; const g = await gh('contents/' + path); if (g.ok) sha = (await g.json()).sha;
-  const r = await gh('contents/' + path, { method: 'PUT', body: JSON.stringify({ message, content: b64(text), ...(sha ? { sha } : {}) }) });
-  const j = await r.json(); if (!r.ok) throw new Error(r.status + ' ' + (j.message || '')); return j;
+  for (let attempt = 0; ; attempt++) {
+    let sha; const g = await gh('contents/' + path); if (g.ok) sha = (await g.json()).sha;
+    const r = await gh('contents/' + path, { method: 'PUT', body: JSON.stringify({ message, content: b64(text), ...(sha ? { sha } : {}) }) });
+    const j = await r.json();
+    if (r.ok) return j;
+    if (r.status === 409 && attempt < 2) continue; // someone else (devserver, Claude) wrote in between: fetch the new sha and retry
+    throw new Error(r.status + ' ' + (j.message || ''));
+  }
 }
 async function ghWrite() {
   dot('d-gh', 'busy');

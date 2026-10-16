@@ -1,5 +1,5 @@
 // Service worker: app shell offline (stale-while-revalidate) and Web Push.
-const CACHE = 'jp-shell-v1';
+const CACHE = 'jp-shell-v2';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
